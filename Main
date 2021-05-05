@@ -112,6 +112,7 @@ void SysTick_Init(unsigned long period){
 }
 
 void playercollision(void);
+void playerexplode();
 
 typedef enum {dead,alive} status_t;
 class sprite{
@@ -126,13 +127,25 @@ class sprite{
 sprite player;
 sprite missile[18];
 sprite enemy;
+sprite enemy1;
+sprite explosion;
 
+int count = rand() % 800000;
+int count1 = rand() % 800000;
 
 void init(void){int i;
-	enemy.x = 50;
-	enemy.y = 8;
+	enemy.x = 126; 
+	enemy.y = -12;
 	enemy.image = PlayerShip0;
 	enemy.life = alive;
+	enemy.vx = -1;
+	enemy.vy = 1;
+	enemy1.x = 0; 
+	enemy1.y = -12;
+	enemy1.image = PlayerShip1;
+	enemy1.life = alive;
+	enemy1.vx = 1;
+	enemy1.vy = 1;
 	player.x = 50;
 	player.y = 40;
 	player.image = MazePlayer;
@@ -305,16 +318,20 @@ void Draw(){
 
 void draw(void){
 	// SSD1306_ClearBuffer();
-	if(player.life == alive){
-		SSD1306_DrawBMP(player.x, player.y, player.image, 0, SSD1306_INVERSE);
+	if(enemy.life == alive){
+		SSD1306_DrawBMP(enemy.x, enemy.y, enemy.image, 0, SSD1306_WHITE);
 	}
-	//if(enemy.life == alive){
-		//SSD1306_DrawBMP(enemy.x, enemy.y, enemy.image, 0, SSD1306_INVERSE);
-	//}
+	if(enemy1.life == alive){
+		SSD1306_DrawBMP(enemy1.x, enemy1.y, enemy1.image, 0, SSD1306_WHITE);
+	}
 	for(int i=0; i<18; i++){
 		if(missile[i].life){
 			SSD1306_DrawBMP(missile[i].x, missile[i].y, missile[i].image, 0, SSD1306_INVERSE);
 		}
+	}
+	playercollision();
+	if(player.life == alive){
+		SSD1306_DrawBMP(player.x, player.y, player.image, 0, SSD1306_INVERSE);
 	}
 	// SSD1306_OutBuffer();
 }
@@ -360,8 +377,8 @@ void Draw1(){
 	SSD1306_DrawBMP(2, MazeSegments[index].ypos14, MazeSegments[index].fourteenth, 0, SSD1306_WHITE); // maze walls 
 	SSD1306_DrawBMP(2, MazeSegments[index].ypos15, MazeSegments[index].fifteenth, 0, SSD1306_WHITE); // maze walls 
 	SSD1306_DrawBMP(2, MazeSegments[index].ypos16, MazeSegments[index].sixteenth, 0, SSD1306_WHITE); // maze walls 
-	playercollision();
 	draw();
+	// playercollision();
 	SSD1306_OutBuffer(); // output to LCD
 	update = false; // Semaphore = 0
 }
@@ -515,19 +532,72 @@ void move(void){
 			}
 		}
 	}
+//	if(enemy.life == alive){
+//			if(enemy.x < 0){
+//				enemy.x = 2;
+//				enemy.vx = -enemy.vx;
+//			}
+//			if(enemy.x > 126){
+//				enemy.x = 124;
+//				enemy.vx = -enemy.vx;
+//			}
+//			if((enemy.y < 62) && (enemy.y > 0)){
+//				enemy.x += enemy.vx;
+//				enemy.y += enemy.vy;
+//			}else{
+//				enemy.life = dead;
+//				count = rand() % 100;
+//			}
+//		}
+	if(enemy.life == alive){
+		if(enemy.x < 0 || enemy.y > 62){
+			enemy.life = dead;
+			enemy.x = 126;
+			enemy.y = -12;
+			count = rand() % 800000;
+			return;
+		} else {
+			enemy.x += enemy.vx;
+			enemy.y += enemy.vy;
+		}
+	}
+	if(enemy1.life == alive){
+		if(enemy1.x < 0 || enemy1.y > 62){
+			enemy1.life = dead;
+			enemy1.x = 0;
+			enemy1.y = -12;
+			count1 = rand() % 800000;
+			return;
+		} else {
+			enemy1.x += enemy1.vx;
+			enemy1.y += enemy1.vy;
+		}
+	}
 }
 
 void collisions(void){
 	int i;
-	uint32_t x1, y1, x2, y2;
+	uint32_t x1, y1, x2, y2, x3, y3;
 	x2 = enemy.x +8;
 	y2 = enemy.y +4;
+	x3 = enemy1.x +8;
+	y3 = enemy1.y +4;
 	for(i=0; i<18; i++){
 		if(missile[i].life == alive){
 			x1 = missile[i].x;
 			y1 = missile[i].y;
 			if(((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2)) < 9){
 				enemy.life = dead;
+				enemy.x = 126;
+				enemy.y = -12;
+				count = rand() % 800000;
+				return;
+			}
+			if(((x1-x3)*(x1-x3)+(y1-y3)*(y1-y3)) < 9){
+				enemy1.life = dead;
+				enemy1.x = 0;
+				enemy1.y = -12;
+				count1 = rand() % 800000;
 				return;
 			}
 		}
@@ -543,6 +613,7 @@ void playercollision(void){
 		(SSD1306_GetPixel(player.x+3, player.y+2) == true))
 		{
 			player.life = dead;
+			playerexplode();
 		}
 		
 }
@@ -605,10 +676,18 @@ int main(){
 			SSD1306_OutClear();
 			break;
 		}
+		if(count == 0){
+			enemy.life = alive;
+		}
+		if(count1 == 0){
+			enemy1.life = alive;
+		}
+		count--;
+		count1--;
 		PF2 ^= 0x04;
 	}
 	SSD1306_ClearBuffer();
-	SSD1306_SetCursor(10, 4);
+	SSD1306_SetCursor(5, 4);
 	SSD1306_OutString((char *)"GAME OVER");
 }
 
@@ -655,6 +734,14 @@ void fire(int32_t vx1, int32_t vy1){int i;
 	missile[i].image = Missile0;
 	missile[i].life = alive;
 }
+
+void playerexplode(){
+	explosion.image = BigExplosion0;
+	SSD1306_DrawBMP(player.x, player.y, explosion.image, 0, SSD1306_INVERSE);
+	SSD1306_OutBuffer();
+	for(int i = 0; i<10000000;i++){}
+}
+
 
 void SysTick_Handler(void){ // every 100 ms
   PF1 ^= 0x02;     // Heartbeat
