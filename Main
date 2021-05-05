@@ -697,7 +697,7 @@ int main(){
 	SSD1306_SetCursor(3, 5);
 	SSD1306_OutString((char *)"Oprime Start para:");
 	SSD1306_SetCursor(5, 6);
-	SSD1306_OutString((char *)"Español");
+	SSD1306_OutString((char *)"Espa\xA4ol");
 	while(1){
 		lang = langSelect();
 		if(lang != 2){
@@ -778,7 +778,7 @@ int main(){
 		SSD1306_SetCursor(5, 3);
 		SSD1306_OutString((char *)"\n");
 		SSD1306_SetCursor(5, 4);
-		SSD1306_OutString((char *)"Puntuación:");
+		SSD1306_OutString((char *)"Puntuacion:");
 		SSD1306_SetCursor(5, 5);
 		SSD1306_OutString((char *)"\n");
 		SSD1306_SetCursor(7, 6);
