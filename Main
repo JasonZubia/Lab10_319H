@@ -45,7 +45,8 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <list>
+#include <string>
+#include <sstream>
 #include "../inc/tm4c123gh6pm.h"
 #include "TExaS.h"
 #include "SSD1306.h"
@@ -132,6 +133,7 @@ sprite explosion;
 
 int count = rand() % 800000;
 int count1 = rand() % 800000;
+int scoreCount = 0;
 
 void init(void){int i;
 	enemy.x = 126; 
@@ -147,7 +149,7 @@ void init(void){int i;
 	enemy1.vx = 1;
 	enemy1.vy = 1;
 	player.x = 50;
-	player.y = 40;
+	player.y = 50;
 	player.image = MazePlayer;
 	player.life = alive;
 	for(i=0; i<18; i++){
@@ -188,7 +190,7 @@ class mazePiece{
 			delete fourth;
 		}	
 };
-
+int VY = 1;
 class mazeSegment{
 	public:
 		int32_t ypos1;
@@ -242,7 +244,7 @@ class mazeSegment{
 			ypos14 = 0;
 			ypos15 = 0;
 			ypos16 = 0;
-			vy = 1;
+			vy = VY;
 			first = buff1;
 			second = buff2;
 			third = buff3;
@@ -549,6 +551,7 @@ void move(void){
 //				count = rand() % 100;
 //			}
 //		}
+	
 	if(enemy.life == alive){
 		if(enemy.x < 0 || enemy.y > 62){
 			enemy.life = dead;
@@ -586,18 +589,20 @@ void collisions(void){
 		if(missile[i].life == alive){
 			x1 = missile[i].x;
 			y1 = missile[i].y;
-			if(((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2)) < 9){
+			if(((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2)) < 49){
 				enemy.life = dead;
 				enemy.x = 126;
 				enemy.y = -12;
 				count = rand() % 800000;
+				scoreCount += 5;
 				return;
 			}
-			if(((x1-x3)*(x1-x3)+(y1-y3)*(y1-y3)) < 9){
+			if(((x1-x3)*(x1-x3)+(y1-y3)*(y1-y3)) < 49){
 				enemy1.life = dead;
 				enemy1.x = 0;
 				enemy1.y = -12;
 				count1 = rand() % 800000;
+				scoreCount += 5;
 				return;
 			}
 		}
@@ -620,12 +625,47 @@ void playercollision(void){
 
 bool playPressed(){
 	if((GPIO_PORTE_DATA_R & 0x01) == 1){
+		while((GPIO_PORTE_DATA_R & 0x01) == 1){}
 		return true;
 	}
 	return false;
 }
 
+int langSelect(){
+	if((GPIO_PORTE_DATA_R & 0x01) == 1){
+		while((GPIO_PORTE_DATA_R & 0x01) == 1){}
+		return 1; // for Spanish
+	} else if ((GPIO_PORTE_DATA_R & 0x04) > 1) {
+		while((GPIO_PORTE_DATA_R & 0x04) > 1){}
+		return 0; // for English
+	} else {
+		return 2; // No button pressed
+	}
+	
+}
+
+//void SSD1306_DrawUDec2(int16_t x, int16_t y, uint32_t n, uint16_t color){
+//	char buf[4];
+//	if(n >= 100){
+//		buf[0] = '*'; /* illegal */
+//		buf[1] = '*'; /* illegal */
+//	}else {
+//		if(n>=10){
+//			buf[0]= n/10+'0'; /* 10 digit */
+//			buf[1] = n%10+'0'; /* ones digit */
+//		}	else{
+//			buf[0]=' ';
+//			buf[1] = n+'0'; /* ones digit */
+//		}
+//	}
+//	buf[2] = 0; // null
+//	SSD1306_DrawString(x,y,buf,color);
+//}
+
 // Intro screen and game play
+int glob = 800000;
+int lang = 2;
+bool pause;
 int main(){
 	DisableInterrupts();
   // pick one of the following three lines, all three set to 80 MHz
@@ -646,13 +686,40 @@ int main(){
   Delay100ms(30);
   SSD1306_ClearBuffer(); // clears buffer
 	SSD1306_OutClear();
+	Delay100ms(5);
 	// EnableInterrupts();
 	// NVIC_ST_CTRL_R = 5; // will stop systick
-	SSD1306_ClearBuffer();
-	SSD1306_DrawBMP(2, 20, WelcomeScreen, 0, SSD1306_WHITE);
-	SSD1306_OutBuffer();
-	SSD1306_SetCursor(0, 4);
-	SSD1306_OutString((char *)"Press Button to Start");
+	// SSD1306_ClearBuffer();
+	SSD1306_SetCursor(3, 2);
+	SSD1306_OutString((char *)"Press Shoot for:");
+	SSD1306_SetCursor(5, 3);
+	SSD1306_OutString((char *)"English");
+	SSD1306_SetCursor(3, 5);
+	SSD1306_OutString((char *)"Oprime Start para:");
+	SSD1306_SetCursor(5, 6);
+	SSD1306_OutString((char *)"Español");
+	while(1){
+		lang = langSelect();
+		if(lang != 2){
+			break;
+		}
+	}
+	if(lang == 0){
+		SSD1306_ClearBuffer();
+		SSD1306_DrawBMP(2, 20, WelcomeScreen, 0, SSD1306_WHITE);
+		SSD1306_OutBuffer();
+		SSD1306_SetCursor(0, 4);
+		SSD1306_OutString((char *)"Press Button to Start");
+	}
+	if(lang == 1){
+		SSD1306_ClearBuffer();
+		SSD1306_DrawBMP(2, 20, WelcomeScreen_Span, 0, SSD1306_WHITE);
+		SSD1306_OutBuffer();
+		SSD1306_SetCursor(3, 4);
+		SSD1306_OutString((char *)"Oprime Start para");
+		SSD1306_SetCursor(7, 5);
+		SSD1306_OutString((char *)"Iniciar");
+	}
 	while(1){
 		if(playPressed()){ // if play is pressed move screens 
 			break;
@@ -669,6 +736,19 @@ int main(){
   // SSD1306_SetCursor(2, 4);
 	// NVIC_ST_CTRL_R = 7; // will start systick
 	while(1){
+		if(playPressed()){ // pause has been pressed 
+			enemy.vx = 0;
+			enemy.vy = 0;
+			enemy1.vx = 0;
+			enemy1.vy = 0;
+			MazeSegments[index].vy = 0;
+			while(!playPressed()){}
+				enemy.vx = -1;
+				enemy.vy = 1;
+				enemy1.vx = 1;
+				enemy1.vy = 1;
+				MazeSegments[index].vy = VY;
+		}
 		if(update){
 		Draw1();
 		}
@@ -676,19 +756,56 @@ int main(){
 			SSD1306_OutClear();
 			break;
 		}
-		if(count == 0){
+		if(count <= 0){
 			enemy.life = alive;
 		}
-		if(count1 == 0){
+		if(count1 <= 0){
 			enemy1.life = alive;
 		}
 		count--;
 		count1--;
+		if(glob == 0){
+			scoreCount++;
+			glob = 800000;
+		}
+		glob--;
 		PF2 ^= 0x04;
 	}
-	SSD1306_ClearBuffer();
-	SSD1306_SetCursor(5, 4);
-	SSD1306_OutString((char *)"GAME OVER");
+	if(lang == 1){
+		SSD1306_ClearBuffer();
+		SSD1306_SetCursor(7, 2);
+		SSD1306_OutString((char *)"FIN!");
+		SSD1306_SetCursor(5, 3);
+		SSD1306_OutString((char *)"\n");
+		SSD1306_SetCursor(5, 4);
+		SSD1306_OutString((char *)"Puntuación:");
+		SSD1306_SetCursor(5, 5);
+		SSD1306_OutString((char *)"\n");
+		SSD1306_SetCursor(7, 6);
+		SSD1306_OutUDec(scoreCount);
+	} else {
+		SSD1306_ClearBuffer();
+		SSD1306_SetCursor(5, 2);
+		SSD1306_OutString((char *)"GAME OVER!");
+		SSD1306_SetCursor(5, 3);
+		SSD1306_OutString((char *)"\n");
+		SSD1306_SetCursor(7, 4);
+		SSD1306_OutString((char *)"Score:");
+		SSD1306_SetCursor(5, 5);
+		SSD1306_OutString((char *)"\n");
+		SSD1306_SetCursor(7, 6);
+		SSD1306_OutUDec(scoreCount);
+	}
+//	std::stringstream score;
+//	score<<scoreCount;
+//	std::string Score;
+//	score>>Score;
+//	char buff[5];
+//	for(int i = 0; i < 4; i++){
+//		buff[i] = Score[i]; 
+//	}
+//	buff[4] = 0;
+//	SSD1306_DrawString(5, 10, buff, SSD1306_WHITE);
 }
 
 
